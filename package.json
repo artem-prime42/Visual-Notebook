@@ -1,0 +1,73 @@
+{
+  "name": "visual-notebook",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "A local-first infinite canvas notebook",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "build": "vite build",
+    "start": "electron .",
+    "dist:win": "npm run build && node scripts/create-icons.cjs && node scripts/build-portable.cjs",
+    "dist:linux": "npm run build && node scripts/create-icons.cjs && node scripts/build-linux.cjs"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.8.4",
+    "html-to-image": "^1.11.13",
+    "jspdf": "^3.0.1",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "electron": "^45.5.0",
+    "electron-builder": "^25.1.8",
+    "sharp": "^0.34.5",
+    "vite": "^6.0.5",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.visualnotebook.desktop",
+    "productName": "Visual Notebook",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "renderer/**/*",
+      "electron/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/visual-notebook.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "VisualNotebook.exe"
+    },
+    "linux": {
+      "icon": "assets/icons",
+      "category": "Utility",
+      "executableName": "visual-notebook",
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "artifactName": "VisualNotebook-${version}.${ext}"
+    }
+  },
+  "allowScripts": {
+    "electron@45.5.0": true,
+    "esbuild@0.25.12": true,
+    "sharp@0.34.5": true
+  }
+}

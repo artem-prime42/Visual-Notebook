@@ -1,0 +1,8 @@
+node_modules/
+renderer/
+dist/
+dist-linux/
+portable-build-output/
+.env
+.env.*
+npm-debug.log*
