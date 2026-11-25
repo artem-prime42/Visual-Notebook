@@ -8,10 +8,12 @@ const initialNodes = [
 ];
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
+let lastNodeDataUpdateAt = 0;
 function snapshot(state) {
   return { nodes: state.nodes, edges: state.edges, settings: state.settings, viewport: state.viewport };
 }
 function historyUpdate(set, get, update) {
+  lastNodeDataUpdateAt = 0;
   const state = get();
   const past = [...state.past, clone(snapshot(state))].slice(-80);
   set({ ...update(state), past, future: [] });
@@ -42,10 +44,19 @@ export const useNotebook = create((set, get) => ({
   setViewport: (viewport) => set({ viewport }),
   setFilePath: (filePath) => set({ filePath }),
   setDirty: (dirty = true) => set({ dirty }),
-  recordHistory: () => set((state) => ({ past: [...state.past, clone(snapshot(state))].slice(-80), future: [] })),
-  updateNodeData: (id, patch) => historyUpdate(set, get, (state) => ({
-    nodes: state.nodes.map((node) => node.id === id ? { ...node, data: { ...node.data, ...patch } } : node), dirty: true,
-  })),
+  recordHistory: () => {
+    lastNodeDataUpdateAt = 0;
+    set((state) => ({ past: [...state.past, clone(snapshot(state))].slice(-80), future: [] }));
+  },
+  updateNodeData: (id, patch) => {
+    const now = Date.now();
+    const update = (state) => ({
+      nodes: state.nodes.map((node) => node.id === id ? { ...node, data: { ...node.data, ...patch } } : node), dirty: true,
+    });
+    if (now - lastNodeDataUpdateAt < 750) set(update);
+    else historyUpdate(set, get, update);
+    lastNodeDataUpdateAt = now;
+  },
   addNode: (type, position) => {
     const language = get().language;
     const defaults = {
@@ -114,22 +125,30 @@ export const useNotebook = create((set, get) => ({
   toggleSetting: (key) => historyUpdate(set, get, (state) => ({ settings: { ...state.settings, [key]: !state.settings[key] }, dirty: true })),
   setSetting: (key, value) => historyUpdate(set, get, (state) => ({ settings: { ...state.settings, [key]: value }, dirty: true })),
   undo: () => {
+    lastNodeDataUpdateAt = 0;
     const state = get();
     if (!state.past.length) return;
     const previous = state.past[state.past.length - 1];
     set({ ...previous, past: state.past.slice(0, -1), future: [clone(snapshot(state)), ...state.future], dirty: true });
   },
   redo: () => {
+    lastNodeDataUpdateAt = 0;
     const state = get();
     if (!state.future.length) return;
     const [next, ...future] = state.future;
     set({ ...next, past: [...state.past, clone(snapshot(state))].slice(-80), future, dirty: true });
   },
-  replaceProject: (project, filePath = null) => set({
-    nodes: project.nodes, edges: project.edges, settings: { ...defaultCanvas, ...project.settings },
-    viewport: project.viewport || { x: 0, y: 0, zoom: 1 }, filePath, dirty: false, past: [], future: [],
-  }),
-  newProject: () => set({ nodes: [], edges: [], settings: { ...defaultCanvas }, viewport: { x: 0, y: 0, zoom: 1 }, filePath: null, dirty: false, past: [], future: [] }),
+  replaceProject: (project, filePath = null) => {
+    lastNodeDataUpdateAt = 0;
+    set({
+      nodes: project.nodes, edges: project.edges, settings: { ...defaultCanvas, ...project.settings },
+      viewport: project.viewport || { x: 0, y: 0, zoom: 1 }, filePath, dirty: false, past: [], future: [],
+    });
+  },
+  newProject: () => {
+    lastNodeDataUpdateAt = 0;
+    set({ nodes: [], edges: [], settings: { ...defaultCanvas }, viewport: { x: 0, y: 0, zoom: 1 }, filePath: null, dirty: false, past: [], future: [] });
+  },
   serialize: () => {
     const { nodes, edges, settings, viewport } = get();
     return JSON.stringify({ format: 'visual-notebook', version: 1, nodes, edges, settings, viewport }, null, 2);

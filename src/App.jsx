@@ -225,6 +225,7 @@ function CanvasApp() {
       try {
         const restored = await window.notebook.restore();
         if (restored?.content) {
+          if (useNotebook.getState().dirty) return;
           const project = validateProject(restored.content, tRef.current);
           if (project.nodes.length || project.edges.length) {
             state.replaceProject(project, null);
@@ -236,7 +237,7 @@ function CanvasApp() {
       }
     }, 350);
     return () => clearTimeout(timer);
-  }, [notify, state]);
+  }, [notify]);
   useEffect(() => {
     if (!dirty) return undefined;
     const timer = setTimeout(() => {
