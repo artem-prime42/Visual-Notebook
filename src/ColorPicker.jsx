@@ -7,6 +7,7 @@ const colors = [
   '#facc15', '#fb923c', '#fb7185', '#f472b6', '#c084fc', '#a1a1aa',
   '#475569', '#365a74', '#3d6652', '#76533d', '#754357', '#eee9dc',
 ];
+const defaultColor = '#25282d';
 
 export default function ColorPicker({ value, onChange, language = 'ru', showLabel = false }) {
   const [open, setOpen] = useState(false);
@@ -19,7 +20,8 @@ export default function ColorPicker({ value, onChange, language = 'ru', showLabe
       <div className="color-swatches">{colors.map((color) => <button key={color} className={`color-swatch ${value?.toLowerCase() === color ? 'chosen' : ''}`} style={{ backgroundColor: color }} title={color} aria-label={color} onClick={() => { onChange(color); setOpen(false); }}>
         {value?.toLowerCase() === color && <Check size={12} />}
       </button>)}</div>
-      <label className="custom-color-row"><span>{tr(language, 'panel.customColor')}</span><span className="custom-color-well" style={{ backgroundColor: value || '#25282d' }}><input type="color" value={value || '#25282d'} aria-label={tr(language, 'panel.customColor')} onChange={(event) => onChange(event.target.value)} /></span></label>
+      <button className="reset-color" onClick={() => { onChange(defaultColor); setOpen(false); }}>{tr(language, 'context.resetColor')}</button>
+      <label className="custom-color-row"><span>{tr(language, 'panel.customColor')}</span><span className="custom-color-well" style={{ backgroundColor: value || defaultColor }}><input type="color" value={value || defaultColor} aria-label={tr(language, 'panel.customColor')} onChange={(event) => onChange(event.target.value)} /></span></label>
     </div>}
   </div>;
 }

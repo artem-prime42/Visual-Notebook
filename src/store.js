@@ -104,6 +104,10 @@ export const useNotebook = create((set, get) => ({
   removeEdge: (id) => historyUpdate(set, get, (state) => ({
     edges: state.edges.filter((edge) => edge.id !== id), dirty: true,
   })),
+  removeAllEdges: () => {
+    if (!get().edges.length) return;
+    historyUpdate(set, get, () => ({ edges: [], dirty: true }));
+  },
   removeSelected: () => historyUpdate(set, get, (state) => {
     const removed = new Set(state.nodes.filter((node) => node.selected).map((node) => node.id));
     for (const node of state.nodes) if (removed.has(node.parentId)) removed.add(node.id);

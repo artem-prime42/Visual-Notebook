@@ -128,11 +128,14 @@ kbd{font-family:inherit;color:#888e99;font-size:10px}
 .empty-hint button{margin-top:4px;padding:8px 13px;border:1px solid #5965a5;border-radius:6px;background:#303750;color:#cdd3ff;cursor:pointer;pointer-events:auto;font-size:11px}
 .hint-icon{display:grid;place-items:center;width:45px;height:45px;margin-bottom:3px;border:1px solid #363a43;border-radius:13px;background:#1a1c20;color:#8998ef}
 .context-overlay{position:fixed;inset:0;z-index:30}
-.context-menu{position:absolute;width:194px;padding:5px;border:1px solid #373a40;border-radius:8px;background:#1e2024;box-shadow:0 12px 32px #0008}
+.context-menu{position:absolute;width:194px;max-height:min(70vh,480px);overflow-y:auto;overscroll-behavior:contain;padding:5px;border:1px solid #373a40;border-radius:8px;background:#1e2024;box-shadow:0 12px 32px #0008}
 .context-menu button{height:32px;width:100%;display:flex;align-items:center;gap:9px;padding:0 8px;border:0;border-radius:5px;background:transparent;color:#d4d6dc;text-align:left;font-size:11px;cursor:pointer}
 .context-menu button:hover{background:#30333a}
 .context-menu button svg{color:#9ba2bc}
 .context-divider{margin:4px 2px;border-top:1px solid #383a40}
+.context-section-title{padding:5px 8px;color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase}
+.context-menu .context-connection{gap:7px}
+.context-connection span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .toast{position:fixed;z-index:40;right:18px;bottom:48px;display:flex;align-items:center;gap:8px;max-width:440px;padding:10px 13px;border:1px solid #40454d;border-radius:7px;background:#24272c;color:#e1e3e7;box-shadow:0 6px 22px #0006;font-size:11px}
 .toast svg{color:#82c492;flex:none}
 @media(max-width:1050px){.properties-panel{width:225px}.brand-name{display:none}.app-menu{margin-left:2px}.tool-button{min-width:29px;padding:0 6px}.toolbar{padding:0 10px}}
@@ -199,6 +202,8 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;b
 .custom-color-well{position:relative;overflow:hidden}
 .custom-color-well input{position:absolute;inset:-6px;width:30px;height:30px;border:0;opacity:0;cursor:pointer}
 .node-color-control{position:absolute;right:8px;top:8px;z-index:5}
+.reset-color{width:100%;margin-top:9px;padding:6px 0;border:0;border-radius:5px;background:transparent;color:var(--text);text-align:left;font-size:11px;cursor:pointer}
+.reset-color:hover{background:#30333a}
 .node-color-control .color-picker-trigger{width:26px;height:26px;min-height:26px;justify-content:center;padding:0;border-color:transparent;background:#0002;opacity:.72}
 .node-color-control .color-picker-trigger:hover{opacity:1}
 .node-color-control .color-picker-trigger>span:last-child{display:none}

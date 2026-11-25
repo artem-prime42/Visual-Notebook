@@ -3,14 +3,13 @@ import {
   Background, BackgroundVariant, Controls, MiniMap, ReactFlow, ReactFlowProvider,
   applyEdgeChanges, applyNodeChanges, useReactFlow,
 } from '@xyflow/react';
-import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
 import {
   MousePointer2, Hand, SquarePlus, StickyNote, Heading, ListChecks, Waypoints,
   Group, Undo2, Redo2, ZoomIn, ZoomOut, Maximize, Grid2X2, Save, FolderOpen,
   Plus, Settings2, X, Copy, Trash2, Check, ChevronLeft, ChevronRight,
   BookOpen, Link2, Orbit, Sparkles, CheckCircle2,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useNotebook } from './store.js';
 import { BlockNode, NoteNode, HeadingNode, ChecklistNode, GroupNode } from './nodes.jsx';
 import ColorPicker from './ColorPicker.jsx';
@@ -52,7 +51,7 @@ function validateProject(value, t) {
 }
 
 function CanvasApp() {
-  const state = useNotebook();
+  const state = useNotebook(useShallow(({ past, future, clipboard, ...visibleState }) => visibleState));
   const flow = useReactFlow();
   const { language, theme } = state;
   const t = useCallback((key) => tr(language, key), [language]);
@@ -70,6 +69,7 @@ function CanvasApp() {
   const selectedNode = nodes.find((node) => node.selected);
   const selectedEdge = edges.find((edge) => edge.selected);
   const selectedCount = nodes.filter((node) => node.selected).length;
+  const nodeTitles = useMemo(() => new Map(nodes.map((node) => [node.id, node.data.title || node.id])), [nodes]);
   const fileName = filePath ? filePath.split(/[\\/]/).pop() : t('app.untitled');
   const notify = useCallback((message) => {
     setNotice(message);
@@ -137,6 +137,7 @@ function CanvasApp() {
 
   const exportProject = useCallback(async (kind) => {
     try {
+      const { toPng } = await import('html-to-image');
       const viewportElement = document.querySelector('.react-flow__viewport');
       if (!viewportElement) throw new Error(t('error.canvas'));
       const currentViewport = flow.getViewport();
@@ -153,6 +154,7 @@ function CanvasApp() {
         if (path) notify(t('app.savedPng'));
         return;
       }
+      const { jsPDF } = await import('jspdf');
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1600, 1000] });
       const dimensions = pdf.getImageProperties(image);
       const ratio = Math.min(1520 / dimensions.width, 920 / dimensions.height);
@@ -221,22 +223,22 @@ function CanvasApp() {
 
   useEffect(() => window.notebook.onMenu(action), [action]);
   useEffect(() => {
-    const timer = setTimeout(async () => {
+    let cancelled = false;
+    const restoreRecovery = async () => {
       try {
         const restored = await window.notebook.restore();
-        if (restored?.content) {
-          if (useNotebook.getState().dirty) return;
-          const project = validateProject(restored.content, tRef.current);
-          if (project.nodes.length || project.edges.length) {
-            state.replaceProject(project, null);
-            notify(tRef.current('notice.recovered'));
-          }
+        if (cancelled || !restored?.content || useNotebook.getState().dirty) return;
+        const project = validateProject(restored.content, tRef.current);
+        if (project.nodes.length || project.edges.length) {
+          useNotebook.getState().replaceProject(project, null);
+          notify(tRef.current('notice.recovered'));
         }
       } catch (error) {
-        notify(`${tRef.current('error.recover')}: ${error.message}`);
+        if (!cancelled) notify(`${tRef.current('error.recover')}: ${error.message}`);
       }
-    }, 350);
-    return () => clearTimeout(timer);
+    };
+    restoreRecovery();
+    return () => { cancelled = true; };
   }, [notify]);
   useEffect(() => {
     if (!dirty) return undefined;
@@ -307,6 +309,11 @@ function CanvasApp() {
     const point = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
     setContext({ x: event.clientX, y: event.clientY, flowPoint: point, onNode: !!node, nodeId: node?.id });
   };
+  const handleEdgeContextMenu = (event, edge) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setContext({ x: event.clientX, y: event.clientY, onEdge: true, edgeId: edge.id });
+  };
 
   const menuAction = (name) => { action(name); };
   const nodeEdgeStyle = useMemo(() => ({ background: 'var(--canvas)' }), []);
@@ -353,9 +360,9 @@ function CanvasApp() {
           onConnect={onConnect} onNodeDragStart={() => state.recordHistory()} onNodeDragStop={() => state.setDirty()}
           onConnectStart={() => setTool('connect')} onConnectEnd={() => setTool((current) => current === 'connect' ? 'select' : current)}
           onMoveEnd={(_event, nextViewport) => state.setViewport(nextViewport)}
-          onPaneClick={handleCanvasClick} onNodeContextMenu={handleContextMenu}
+          onPaneClick={handleCanvasClick} onNodeContextMenu={handleContextMenu} onEdgeContextMenu={handleEdgeContextMenu}
           onEdgeClick={(_event, edge) => { state.setNodes(nodes.map((node) => ({ ...node, selected: false }))); state.setEdges(edges.map((entry) => ({ ...entry, selected: entry.id === edge.id }))); }}
-          connectionMode="loose" nodesConnectable={tool === 'connect'} fitView={nodes.length > 0 && !filePath && !dirty} fitViewOptions={{ padding: 0.2 }}
+          connectionMode="strict" nodesConnectable={tool === 'connect'} fitView={nodes.length > 0 && !filePath && !dirty} fitViewOptions={{ padding: 0.2 }}
           panOnDrag={tool === 'pan' ? true : [1]} selectionOnDrag={tool === 'select'} selectionMode="partial"
           panOnScroll={false} zoomOnScroll zoomOnPinch zoomOnDoubleClick={false} deleteKeyCode={null}
           snapToGrid={settings.snapToGrid} snapGrid={[settings.gridSize, settings.gridSize]}
@@ -399,8 +406,8 @@ function CanvasApp() {
       <div className="bottom-tools"><button onClick={() => state.toggleSetting('showGrid')} className={settings.showGrid ? 'active' : ''} title={t('panel.showGrid')}><Grid2X2 size={14} /></button><span>{tool === 'connect' ? t('canvas.hintConnect') : tool === 'pan' ? t('canvas.hintPan') : t('canvas.hintDefault')}</span></div>
       {!showProperties && <button className="show-props" onClick={() => setShowProperties(true)}><Settings2 size={14} /> {t('panel.properties')}</button>}
     </footer>
-    {context && <div className="context-overlay" onMouseDown={() => setContext(null)}><div className="context-menu" style={{ left: Math.min(context.x, window.innerWidth - 205), top: Math.min(context.y, window.innerHeight - 300) }} onMouseDown={(event) => event.stopPropagation()}>
-      {!context.onNode && <><button onClick={() => { addItem('block', context.flowPoint); setContext(null); }}><SquarePlus size={15} /> {t('context.createBlock')}</button>
+    {context && <div className="context-overlay" onMouseDown={() => setContext(null)}><div className="context-menu" style={{ left: Math.min(context.x, window.innerWidth - 205), top: Math.min(context.y, window.innerHeight - Math.min(window.innerHeight * 0.7, 480) - 8) }} onMouseDown={(event) => event.stopPropagation()}>
+      {!context.onNode && !context.onEdge && <><button onClick={() => { addItem('block', context.flowPoint); setContext(null); }}><SquarePlus size={15} /> {t('context.createBlock')}</button>
         <button onClick={() => { addItem('note', context.flowPoint); setContext(null); }}><StickyNote size={15} /> {t('context.createNote')}</button>
         <button onClick={() => { addItem('heading', context.flowPoint); setContext(null); }}><Heading size={15} /> {t('context.createHeading')}</button>
         <button onClick={() => { addItem('checklist', context.flowPoint); setContext(null); }}><ListChecks size={15} /> {t('context.createChecklist')}</button>
@@ -410,6 +417,22 @@ function CanvasApp() {
       {context.onNode && <><button onClick={() => { state.setNodes(nodes.map((node) => ({ ...node, selected: node.id === context.nodeId }))); state.duplicateSelected(); setContext(null); }}><Copy size={15} /> {t('action.duplicate')}</button>
         <button onClick={() => { state.setNodes(nodes.map((node) => ({ ...node, selected: node.id === context.nodeId }))); state.removeSelected(); setContext(null); }}><Trash2 size={15} /> {t('action.delete')}</button>
         <div className="context-color-picker"><ColorPicker value={nodes.find((node) => node.id === context.nodeId)?.data.color} onChange={(color) => state.updateNodeData(context.nodeId, { color })} language={language} showLabel /></div>
+      </>}
+      {edges.length > 0 && <>
+        <div className="context-divider" />
+        <div className="context-connections">
+          <div className="context-section-title">{t('context.connections')}</div>
+          {edges.map((edge) => {
+            const label = typeof edge.label === 'string' && edge.label.trim()
+              ? edge.label
+              : `${nodeTitles.get(edge.source) || edge.source} → ${nodeTitles.get(edge.target) || edge.target}`;
+            return <button key={edge.id} className="context-connection" title={label} aria-label={`${t('context.deleteConnection')}: ${label}`} onClick={() => { state.removeEdge(edge.id); setContext(null); }}>
+              <Trash2 size={15} /><span>{label}</span>
+            </button>;
+          })}
+        </div>
+        <div className="context-divider" />
+        <button onClick={() => { state.removeAllEdges(); setContext(null); }}><Trash2 size={15} /> {t('context.deleteAllConnections')}</button>
       </>}
     </div></div>}
     {settingsDialog && <div className="settings-backdrop" onMouseDown={() => setSettingsDialog(null)}><section className={`settings-dialog ${settingsDialog === 'theme' ? 'theme-dialog' : ''}`} onMouseDown={(event) => event.stopPropagation()}>
