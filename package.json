@@ -59,8 +59,7 @@
       "category": "Utility",
       "executableName": "visual-notebook",
       "target": [
-        "AppImage",
-        "tar.gz"
+        "AppImage"
       ],
       "artifactName": "VisualNotebook-${version}.${ext}"
     }

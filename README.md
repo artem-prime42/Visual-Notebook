@@ -14,7 +14,7 @@
 - Пошаговая инструкция при первом запуске.
 - Локальные проекты `.vnote`, автосохранение и восстановление.
 - Экспорт холста в PNG и PDF.
-- Portable-сборка для Windows x64 и Linux-сборка в tar.gz; AppImage собирается на Linux.
+- Portable-сборка для Windows x64 и Linux-сборка в формате AppImage.
 
 ## Использование
 
@@ -52,13 +52,13 @@ npm run dist:win
 
 Результат: `dist/VisualNotebook.exe`.
 
-Сборка для Linux x64:
+Сборка AppImage для Linux x64 (в Linux или WSL):
 
 ```bash
 npm run dist:linux
 ```
 
-Скрипт создаёт архив `VisualNotebook-1.0.0.tar.gz` в `dist-linux`. На Linux также собирается AppImage. На Windows AppImage пропускается, так как для него требуется Linux-инструмент `mksquashfs`.
+Скрипт создаёт `VisualNotebook-1.0.0.AppImage` в `dist-linux`. Для сборки нужен Linux-инструмент `mksquashfs`; при запуске скрипта в Windows он завершится с подсказкой использовать Linux или WSL.
 
 ## Данные и конфиденциальность
 

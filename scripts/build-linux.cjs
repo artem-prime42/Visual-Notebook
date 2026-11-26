@@ -13,12 +13,10 @@ async function buildTarget(target) {
 }
 
 async function main() {
-  await buildTarget('tar.gz');
-  if (process.platform !== 'win32') {
-    await buildTarget('AppImage');
-  } else {
-    console.warn('Skipping AppImage: build it on Linux; Windows cannot run its mksquashfs tool.');
+  if (process.platform !== 'linux') {
+    throw new Error('AppImage must be built on Linux; run this script in Linux or WSL.');
   }
+  await buildTarget('AppImage');
 }
 
 main().catch((error) => {
